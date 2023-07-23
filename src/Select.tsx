@@ -1,28 +1,54 @@
 import styles from "./select.module.css"
-import {useState} from 'react'
+import {useEffect, useState} from 'react'
 type SelectOption = {
     label: string,
-    value: any
+    value: string | number
+}
+
+type MultipleSelectProps = {
+    multiple: true
+    value: SelectOption[]
+    onChange: (value: SelectOption | undefined) => void
+}
+
+type SingleSelectProps = {
+    multiple?: false
+    value?: SelectOption
+    onChange: (value: SelectOption | undefined) => void
 }
 
 type SelectProps = {
     options: SelectOption[]
-    value?: SelectOption
-    onChange: (value: SelectOption | undefined) => void
-}
-export function Select({value, onChange, options}: SelectProps) {
+} & (SingleSelectProps | MultipleSelectProps)
+
+export function Select({multiple, value, onChange, options}: SelectProps) {
     const [isOpen, setIsOpen] = useState(true)
+    const [highlightedIndex, setHighlightedIndex] = useState(0)
+
     const clearOptions = () =>  {
-        onChange(undefined)
+        multiple ? onChange([]) : onChange(undefined)
     }
 
     const selectOption = (option: SelectOption ) => {
-        onChange(option)
+        if(multiple) {
+            if(value.includes(option)) {
+                onChange(value.filter(o => o !== option))
+            } else {
+                onChange([...value, option])
+            }
+        } else {
+            if(option !== value) onChange(option)
+        }
     }
 
     const isOptionSelected = (option: SelectOption) =>  {
-        return option === value 
+        return multiple ? value.includes(option) : option === value 
     }
+
+    useEffect(()=> {
+        if (isOpen) setHighlightedIndex(0)
+    }, [isOpen])
+
 
     return (
         <>
@@ -39,14 +65,15 @@ export function Select({value, onChange, options}: SelectProps) {
                 <div className={styles.divider}></div>
                 <div className={styles.caret}></div>
                 <ul className={`${styles.options} ${isOpen ? styles.show : ""}`}>
-                    {options.map(option => (
+                    {options.map((option, index) => (
                         <li onClick={e => {
                             e.stopPropagation()
                             selectOption(option)
                             setIsOpen(false)
                         }}
-                         key={option.label} 
-                         className={`${styles.option} ${isOptionSelected(option) ? styles.selected : ""}`}
+                         onMouseEnter={() => setHighlightedIndex(index)}
+                         key={option.value} 
+                         className={`${styles.option} ${isOptionSelected(option) ? styles.selected : ""} ${index === highlightedIndex ? styles.highlighted : ""}`}
                          >{option.label}</li>
                     ))}
                 </ul>
